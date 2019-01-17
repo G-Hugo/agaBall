@@ -1,0 +1,10 @@
+{
+  "name": "agaBall",
+  "description": "fake",
+  "scripts": {
+    "build": "gulp build",
+    "start": "gulp run",
+    "watch": "gulp watch",
+    "test": "gulp test"
+  }
+}
