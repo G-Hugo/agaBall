@@ -2,10 +2,10 @@
 
 'use strict';
 
-const cfg = require('../../../config.json');
+var cfg = require('../../../config.json');
 
 exports.validNick = function(nickname) {
-    const regex = /^\w*$/;
+    var regex = /^\w*$/;
     return regex.exec(nickname) !== null;
 };
 
@@ -17,7 +17,7 @@ exports.massToRadius = function (mass) {
 
 // overwrite Math.log function
 exports.log = (function () {
-    const log = Math.log;
+    var log = Math.log;
     return function (n, base) {
         return log(n) / (base ? log(base) : 1);
     };
@@ -41,21 +41,21 @@ exports.randomPosition = function (radius) {
 };
 
 exports.uniformPosition = function(points, radius) {
-    const bestCandidate, maxDistance = 0;
-    const numberOfCandidates = 10;
+    var bestCandidate, maxDistance = 0;
+    var numberOfCandidates = 10;
 
     if (points.length === 0) {
         return exports.randomPosition(radius);
     }
 
     // Generate the candidates
-    for (const ci = 0; ci < numberOfCandidates; ci++) {
-        const minDistance = Infinity;
-        const candidate = exports.randomPosition(radius);
+    for (var ci = 0; ci < numberOfCandidates; ci++) {
+        var minDistance = Infinity;
+        var candidate = exports.randomPosition(radius);
         candidate.radius = radius;
 
-        for (const pi = 0; pi < points.length; pi++) {
-            const distance = exports.getDistance(candidate, points[pi]);
+        for (var pi = 0; pi < points.length; pi++) {
+            var distance = exports.getDistance(candidate, points[pi]);
             if (distance < minDistance) {
                 minDistance = distance;
             }
@@ -73,7 +73,7 @@ exports.uniformPosition = function(points, radius) {
 };
 
 exports.findIndex = function(arr, id) {
-    const len = arr.length;
+    var len = arr.length;
 
     while (len--) {
         if (arr[len].id === id) {
@@ -85,11 +85,11 @@ exports.findIndex = function(arr, id) {
 };
 
 exports.randomColor = function() {
-    const color = '#' + ('00000' + (Math.random() * (1 << 24) | 0).toString(16)).slice(-6);
-    const c = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
-    const r = (parseInt(c[1], 16) - 32) > 0 ? (parseInt(c[1], 16) - 32) : 0;
-    const g = (parseInt(c[2], 16) - 32) > 0 ? (parseInt(c[2], 16) - 32) : 0;
-    const b = (parseInt(c[3], 16) - 32) > 0 ? (parseInt(c[3], 16) - 32) : 0;
+    var color = '#' + ('00000' + (Math.random() * (1 << 24) | 0).toString(16)).slice(-6);
+    var c = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
+    var r = (parseInt(c[1], 16) - 32) > 0 ? (parseInt(c[1], 16) - 32) : 0;
+    var g = (parseInt(c[2], 16) - 32) > 0 ? (parseInt(c[2], 16) - 32) : 0;
+    var b = (parseInt(c[3], 16) - 32) > 0 ? (parseInt(c[3], 16) - 32) : 0;
 
     return {
         fill: color,

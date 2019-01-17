@@ -1,41 +1,41 @@
 /*jslint bitwise: true, node: true */
 'use strict';
 
-const express = require('express');
-const app = express();
-const http = require('http').Server(app);
-const io = require('socket.io')(http);
-const SAT = require('sat');
-const sql = require ("mysql");
+var express = require('express');
+var app = express();
+var http = require('http').Server(app);
+var io = require('socket.io')(http);
+var SAT = require('sat');
+var sql = require ("mysql");
 
 // Import game settings.
-const conf = require('../../config.json');
+var c = require('../../config.json');
 
 // Import utilities.
-const util = require('./lib/util');
+var util = require('./lib/util');
 
 // Import quadtree.
-const quadtree = require('simple-quadtree');
+var quadtree = require('simple-quadtree');
 
 //call sqlinfo
-const s = conf.sqlinfo;
+var s = c.sqlinfo;
 
-const tree = quadtree(0, 0, conf.gameWidth, conf.gameHeight);
+var tree = quadtree(0, 0, c.gameWidth, c.gameHeight);
 
-const users = [];
-const massFood = [];
-const food = [];
-const virus = [];
-const sockets = {};
+var users = [];
+var massFood = [];
+var food = [];
+var virus = [];
+var sockets = {};
 
-const leaderboard = [];
-const leaderboardChanged = false;
+var leaderboard = [];
+var leaderboardChanged = false;
 
-const V = SAT.Vector;
-const C = SAT.Circle;
+var V = SAT.Vector;
+var C = SAT.Circle;
 
 if(s.host !== "DEFAULT") {
-    const pool = sql.createConnection({
+    var pool = sql.createConnection({
         host: s.host,
         user: s.user,
         password: s.password,
@@ -50,14 +50,14 @@ if(s.host !== "DEFAULT") {
     });
 }
 
-const initMassLog = util.log(conf.defaultPlayerMass, conf.slowBase);
+var initMassLog = util.log(c.defaultPlayerMass, c.slowBase);
 
 app.use(express.static(__dirname + '/../client'));
 
 function addFood(toAdd) {
-    const radius = util.massToRadius(conf.foodMass);
+    var radius = util.massToRadius(c.foodMass);
     while (toAdd--) {
-        const position = conf.foodUniformDisposition ? util.uniformPosition(food, radius) : util.randomPosition(radius);
+        var position = c.foodUniformDisposition ? util.uniformPosition(food, radius) : util.randomPosition(radius);
         food.push({
             // Make IDs unique.
             id: ((new Date()).getTime() + '' + food.length) >>> 0,
@@ -72,18 +72,18 @@ function addFood(toAdd) {
 
 function addVirus(toAdd) {
     while (toAdd--) {
-        const mass = util.randomInRange(conf.virus.defaultMass.from, conf.virus.defaultMass.to, true);
-        const radius = util.massToRadius(mass);
-        const position = conf.virusUniformDisposition ? util.uniformPosition(virus, radius) : util.randomPosition(radius);
+        var mass = util.randomInRange(c.virus.defaultMass.from, c.virus.defaultMass.to, true);
+        var radius = util.massToRadius(mass);
+        var position = c.virusUniformDisposition ? util.uniformPosition(virus, radius) : util.randomPosition(radius);
         virus.push({
             id: ((new Date()).getTime() + '' + virus.length) >>> 0,
             x: position.x,
             y: position.y,
             radius: radius,
             mass: mass,
-            fill: conf.virus.fill,
-            stroke: conf.virus.stroke,
-            strokeWidth: conf.virus.strokeWidth
+            fill: c.virus.fill,
+            stroke: c.virus.stroke,
+            strokeWidth: c.virus.strokeWidth
         });
     }
 }
@@ -95,22 +95,22 @@ function removeFood(toRem) {
 }
 
 function movePlayer(player) {
-    const x =0,y =0;
-    for(const i=0; i<player.cells.length; i++)
+    var x =0,y =0;
+    for(var i=0; i<player.cells.length; i++)
     {
-        const target = {
+        var target = {
             x: player.x - player.cells[i].x + player.target.x,
             y: player.y - player.cells[i].y + player.target.y
         };
-        const dist = Math.sqrt(Math.pow(target.y, 2) + Math.pow(target.x, 2));
-        const deg = Math.atan2(target.y, target.x);
-        const slowDown = 1;
+        var dist = Math.sqrt(Math.pow(target.y, 2) + Math.pow(target.x, 2));
+        var deg = Math.atan2(target.y, target.x);
+        var slowDown = 1;
         if(player.cells[i].speed <= 6.25) {
-            slowDown = util.log(player.cells[i].mass, conf.slowBase) - initMassLog + 1;
+            slowDown = util.log(player.cells[i].mass, c.slowBase) - initMassLog + 1;
         }
 
-        const deltaY = player.cells[i].speed * Math.sin(deg)/ slowDown;
-        const deltaX = player.cells[i].speed * Math.cos(deg)/ slowDown;
+        var deltaY = player.cells[i].speed * Math.sin(deg)/ slowDown;
+        var deltaX = player.cells[i].speed * Math.cos(deg)/ slowDown;
 
         if(player.cells[i].speed > 6.25) {
             player.cells[i].speed -= 0.5;
@@ -126,12 +126,12 @@ function movePlayer(player) {
             player.cells[i].x += deltaX;
         }
         // Find best solution.
-        for(const j=0; j<player.cells.length; j++) {
+        for(var j=0; j<player.cells.length; j++) {
             if(j != i && player.cells[i] !== undefined) {
-                const distance = Math.sqrt(Math.pow(player.cells[j].y-player.cells[i].y,2) + Math.pow(player.cells[j].x-player.cells[i].x,2));
-                const radiusTotal = (player.cells[i].radius + player.cells[j].radius);
+                var distance = Math.sqrt(Math.pow(player.cells[j].y-player.cells[i].y,2) + Math.pow(player.cells[j].x-player.cells[i].x,2));
+                var radiusTotal = (player.cells[i].radius + player.cells[j].radius);
                 if(distance < radiusTotal) {
-                    if(player.lastSplit > new Date().getTime() - 1000 * conf.mergeTimer) {
+                    if(player.lastSplit > new Date().getTime() - 1000 * c.mergeTimer) {
                         if(player.cells[i].x < player.cells[j].x) {
                             player.cells[i].x--;
                         } else if(player.cells[i].x > player.cells[j].x) {
@@ -152,12 +152,12 @@ function movePlayer(player) {
             }
         }
         if(player.cells.length > i) {
-            const borderCalc = player.cells[i].radius / 3;
-            if (player.cells[i].x > conf.gameWidth - borderCalc) {
-                player.cells[i].x = conf.gameWidth - borderCalc;
+            var borderCalc = player.cells[i].radius / 3;
+            if (player.cells[i].x > c.gameWidth - borderCalc) {
+                player.cells[i].x = c.gameWidth - borderCalc;
             }
-            if (player.cells[i].y > conf.gameHeight - borderCalc) {
-                player.cells[i].y = conf.gameHeight - borderCalc;
+            if (player.cells[i].y > c.gameHeight - borderCalc) {
+                player.cells[i].y = c.gameHeight - borderCalc;
             }
             if (player.cells[i].x < borderCalc) {
                 player.cells[i].x = borderCalc;
@@ -174,9 +174,9 @@ function movePlayer(player) {
 }
 
 function moveMass(mass) {
-    const deg = Math.atan2(mass.target.y, mass.target.x);
-    const deltaY = mass.speed * Math.sin(deg);
-    const deltaX = mass.speed * Math.cos(deg);
+    var deg = Math.atan2(mass.target.y, mass.target.x);
+    var deltaY = mass.speed * Math.sin(deg);
+    var deltaX = mass.speed * Math.cos(deg);
 
     mass.speed -= 0.5;
     if(mass.speed < 0) {
@@ -189,13 +189,13 @@ function moveMass(mass) {
         mass.x += deltaX;
     }
 
-    const borderCalc = mass.radius + 5;
+    var borderCalc = mass.radius + 5;
 
-    if (mass.x > conf.gameWidth - borderCalc) {
-        mass.x = conf.gameWidth - borderCalc;
+    if (mass.x > c.gameWidth - borderCalc) {
+        mass.x = c.gameWidth - borderCalc;
     }
-    if (mass.y > conf.gameHeight - borderCalc) {
-        mass.y = conf.gameHeight - borderCalc;
+    if (mass.y > c.gameHeight - borderCalc) {
+        mass.y = c.gameHeight - borderCalc;
     }
     if (mass.x < borderCalc) {
         mass.x = borderCalc;
@@ -206,16 +206,16 @@ function moveMass(mass) {
 }
 
 function balanceMass() {
-    const totalMass = food.length * conf.foodMass +
+    var totalMass = food.length * c.foodMass +
         users
             .map(function(u) {return u.massTotal; })
             .reduce(function(pu,cu) { return pu+cu;}, 0);
 
-    const massDiff = conf.gameMass - totalMass;
-    const maxFoodDiff = conf.maxFood - food.length;
-    const foodDiff = parseInt(massDiff / conf.foodMass) - maxFoodDiff;
-    const foodToAdd = Math.min(foodDiff, maxFoodDiff);
-    const foodToRemove = -Math.max(foodDiff, maxFoodDiff);
+    var massDiff = c.gameMass - totalMass;
+    var maxFoodDiff = c.maxFood - food.length;
+    var foodDiff = parseInt(massDiff / c.foodMass) - maxFoodDiff;
+    var foodToAdd = Math.min(foodDiff, maxFoodDiff);
+    var foodToRemove = -Math.max(foodDiff, maxFoodDiff);
 
     if (foodToAdd > 0) {
         //console.log('[DEBUG] Adding ' + foodToAdd + ' food to level!');
@@ -228,7 +228,7 @@ function balanceMass() {
         //console.log('[DEBUG] Mass rebalanced!');
     }
 
-    const virusToAdd = conf.maxVirus - virus.length;
+    var virusToAdd = c.maxVirus - virus.length;
 
     if (virusToAdd > 0) {
         addVirus(virusToAdd);
@@ -238,28 +238,28 @@ function balanceMass() {
 io.on('connection', function (socket) {
     console.log('A user connected!', socket.handshake.query.type);
 
-    const type = socket.handshake.query.type;
-    const radius = util.massToRadius(conf.defaultPlayerMass);
-    const position = conf.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
+    var type = socket.handshake.query.type;
+    var radius = util.massToRadius(c.defaultPlayerMass);
+    var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
 
-    const cells = [];
-    const massTotal = 0;
+    var cells = [];
+    var massTotal = 0;
     if(type === 'player') {
         cells = [{
-            mass: conf.defaultPlayerMass,
+            mass: c.defaultPlayerMass,
             x: position.x,
             y: position.y,
             radius: radius
         }];
-        massTotal = conf.defaultPlayerMass;
+        massTotal = c.defaultPlayerMass;
     }
 
-    const currentPlayer = {
+    var currentPlayer = {
         id: socket.id,
         x: position.x,
         y: position.y,
-        w: conf.defaultPlayerMass,
-        h: conf.defaultPlayerMass,
+        w: c.defaultPlayerMass,
+        h: c.defaultPlayerMass,
         cells: cells,
         massTotal: massTotal,
         hue: Math.round(Math.random() * 360),
@@ -284,8 +284,8 @@ io.on('connection', function (socket) {
             console.log('[INFO] Player ' + player.name + ' connected!');
             sockets[player.id] = socket;
 
-            const radius = util.massToRadius(conf.defaultPlayerMass);
-            const position = conf.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
+            var radius = util.massToRadius(c.defaultPlayerMass);
+            var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
 
             player.x = position.x;
             player.y = position.y;
@@ -293,12 +293,12 @@ io.on('connection', function (socket) {
             player.target.y = 0;
             if(type === 'player') {
                 player.cells = [{
-                    mass: conf.defaultPlayerMass,
+                    mass: c.defaultPlayerMass,
                     x: position.x,
                     y: position.y,
                     radius: radius
                 }];
-                player.massTotal = conf.defaultPlayerMass;
+                player.massTotal = c.defaultPlayerMass;
             }
             else {
                  player.cells = [];
@@ -312,8 +312,8 @@ io.on('connection', function (socket) {
             io.emit('playerJoin', { name: currentPlayer.name });
 
             socket.emit('gameSetup', {
-                gameWidth: conf.gameWidth,
-                gameHeight: conf.gameHeight
+                gameWidth: c.gameWidth,
+                gameHeight: c.gameHeight
             });
             console.log('Total players: ' + users.length);
         }
@@ -345,16 +345,16 @@ io.on('connection', function (socket) {
     });
 
     socket.on('playerChat', function(data) {
-        const _sender = data.sender.replace(/(<([^>]+)>)/ig, '');
-        const _message = data.message.replace(/(<([^>]+)>)/ig, '');
-        if (conf.logChat === 1) {
+        var _sender = data.sender.replace(/(<([^>]+)>)/ig, '');
+        var _message = data.message.replace(/(<([^>]+)>)/ig, '');
+        if (c.logChat === 1) {
             console.log('[CHAT] [' + (new Date()).getHours() + ':' + (new Date()).getMinutes() + '] ' + _sender + ': ' + _message);
         }
         socket.broadcast.emit('serverSendPlayerChat', {sender: _sender, message: _message.substring(0,35)});
     });
 
     socket.on('pass', function(data) {
-        if (data[0] === conf.adminPass) {
+        if (data[0] === c.adminPass) {
             console.log('[ADMIN] ' + currentPlayer.name + ' just logged in as an admin!');
             socket.emit('serverMSG', 'Welcome back ' + currentPlayer.name);
             socket.broadcast.emit('serverMSG', currentPlayer.name + ' just logged in as admin!');
@@ -370,12 +370,12 @@ io.on('connection', function (socket) {
 
     socket.on('kick', function(data) {
         if (currentPlayer.admin) {
-            const reason = '';
-            const worked = false;
-            for (const e = 0; e < users.length; e++) {
+            var reason = '';
+            var worked = false;
+            for (var e = 0; e < users.length; e++) {
                 if (users[e].name === data[0] && !users[e].admin && !worked) {
                     if (data.length > 1) {
-                        for (const f = 1; f < data.length; f++) {
+                        for (var f = 1; f < data.length; f++) {
                             if (f === data.length) {
                                 reason = reason + data[f];
                             }
@@ -416,12 +416,12 @@ io.on('connection', function (socket) {
 
     socket.on('1', function() {
         // Fire food.
-        for(const i=0; i<currentPlayer.cells.length; i++)
+        for(var i=0; i<currentPlayer.cells.length; i++)
         {
-            if(((currentPlayer.cells[i].mass >= conf.defaultPlayerMass + conf.fireFood) && conf.fireFood > 0) || (currentPlayer.cells[i].mass >= 20 && conf.fireFood === 0)){
-                const masa = 1;
-                if(conf.fireFood > 0)
-                    masa = conf.fireFood;
+            if(((currentPlayer.cells[i].mass >= c.defaultPlayerMass + c.fireFood) && c.fireFood > 0) || (currentPlayer.cells[i].mass >= 20 && c.fireFood === 0)){
+                var masa = 1;
+                if(c.fireFood > 0)
+                    masa = c.fireFood;
                 else
                     masa = currentPlayer.cells[i].mass*0.1;
                 currentPlayer.cells[i].mass -= masa;
@@ -445,7 +445,7 @@ io.on('connection', function (socket) {
     });
     socket.on('2', function(virusCell) {
         function splitCell(cell) {
-            if(cell.mass >= conf.defaultPlayerMass*2) {
+            if(cell.mass >= c.defaultPlayerMass*2) {
                 cell.mass = cell.mass/2;
                 cell.radius = util.massToRadius(cell.mass);
                 currentPlayer.cells.push({
@@ -458,16 +458,16 @@ io.on('connection', function (socket) {
             }
         }
 
-        if(currentPlayer.cells.length < conf.limitSplit && currentPlayer.massTotal >= conf.defaultPlayerMass*2) {
+        if(currentPlayer.cells.length < c.limitSplit && currentPlayer.massTotal >= c.defaultPlayerMass*2) {
             //Split single cell from virus
             if(virusCell) {
               splitCell(currentPlayer.cells[virusCell]);
             }
             else {
               //Split all cells
-              if(currentPlayer.cells.length < conf.limitSplit && currentPlayer.massTotal >= conf.defaultPlayerMass*2) {
-                  const numMax = currentPlayer.cells.length;
-                  for(const d=0; d<numMax; d++) {
+              if(currentPlayer.cells.length < c.limitSplit && currentPlayer.massTotal >= c.defaultPlayerMass*2) {
+                  var numMax = currentPlayer.cells.length;
+                  for(var d=0; d<numMax; d++) {
                       splitCell(currentPlayer.cells[d]);
                   }
               }
@@ -478,8 +478,8 @@ io.on('connection', function (socket) {
 });
 
 function tickPlayer(currentPlayer) {
-    if(currentPlayer.lastHeartbeat < new Date().getTime() - conf.maxHeartbeatInterval) {
-        sockets[currentPlayer.id].emit('kick', 'Last heartbeat received over ' + conf.maxHeartbeatInterval + ' ago.');
+    if(currentPlayer.lastHeartbeat < new Date().getTime() - c.maxHeartbeatInterval) {
+        sockets[currentPlayer.id].emit('kick', 'Last heartbeat received over ' + c.maxHeartbeatInterval + ' ago.');
         sockets[currentPlayer.id].disconnect();
     }
 
@@ -505,10 +505,10 @@ function tickPlayer(currentPlayer) {
     }
 
     function check(user) {
-        for(const i=0; i<user.cells.length; i++) {
+        for(var i=0; i<user.cells.length; i++) {
             if(user.cells[i].mass > 10 && user.id !== currentPlayer.id) {
-                const response = new SAT.Response();
-                const collided = SAT.testCircleCircle(playerCircle,
+                var response = new SAT.Response();
+                var collided = SAT.testCircleCircle(playerCircle,
                     new C(new V(user.cells[i].x, user.cells[i].y), user.cells[i].radius),
                     response);
                 if (collided) {
@@ -534,7 +534,7 @@ function tickPlayer(currentPlayer) {
             console.log('[DEBUG] Collision info:');
             console.log(collision);
 
-            const numUser = util.findIndex(users, collision.bUser.id);
+            var numUser = util.findIndex(users, collision.bUser.id);
             if (numUser > -1) {
                 if(users[numUser].cells.length > 1) {
                     users[numUser].massTotal -= collision.bUser.mass;
@@ -550,22 +550,22 @@ function tickPlayer(currentPlayer) {
         }
     }
 
-    for(const z=0; z<currentPlayer.cells.length; z++) {
-        const currentCell = currentPlayer.cells[z];
-        const playerCircle = new C(
+    for(var z=0; z<currentPlayer.cells.length; z++) {
+        var currentCell = currentPlayer.cells[z];
+        var playerCircle = new C(
             new V(currentCell.x, currentCell.y),
             currentCell.radius
         );
 
-        const foodEaten = food.map(funcFood)
+        var foodEaten = food.map(funcFood)
             .reduce( function(a, b, c) { return b ? a.concat(c) : a; }, []);
 
         foodEaten.forEach(deleteFood);
 
-        const massEaten = massFood.map(eatMass)
+        var massEaten = massFood.map(eatMass)
             .reduce(function(a, b, c) {return b ? a.concat(c) : a; }, []);
 
-        const virusCollision = virus.map(funcFood)
+        var virusCollision = virus.map(funcFood)
            .reduce( function(a, b, c) { return b ? a.concat(c) : a; }, []);
 
         if(virusCollision > 0 && currentCell.mass > virus[virusCollision].mass) {
@@ -573,12 +573,12 @@ function tickPlayer(currentPlayer) {
           virus.splice(virusCollision, 1);
         }
 
-        const masaGanada = 0;
-        for(const m=0; m<massEaten.length; m++) {
+        var masaGanada = 0;
+        for(var m=0; m<massEaten.length; m++) {
             masaGanada += massFood[massEaten[m]].masa;
             massFood[massEaten[m]] = {};
             massFood.splice(massEaten[m],1);
-            for(const n=0; n<massEaten.length; n++) {
+            for(var n=0; n<massEaten.length; n++) {
                 if(massEaten[m] < massEaten[n]) {
                     massEaten[n]--;
                 }
@@ -587,7 +587,7 @@ function tickPlayer(currentPlayer) {
 
         if(typeof(currentCell.speed) == "undefined")
             currentCell.speed = 6.25;
-        masaGanada += (foodEaten.length * conf.foodMass);
+        masaGanada += (foodEaten.length * c.foodMass);
         currentCell.mass += masaGanada;
         currentPlayer.massTotal += masaGanada;
         currentCell.radius = util.massToRadius(currentCell.mass);
@@ -595,16 +595,16 @@ function tickPlayer(currentPlayer) {
 
         tree.clear();
         users.forEach(tree.put);
-        const playerCollisions = [];
+        var playerCollisions = [];
 
-        const otherUsers =  tree.get(currentPlayer, check);
+        var otherUsers =  tree.get(currentPlayer, check);
 
         playerCollisions.forEach(collisionCheck);
     }
 }
 
 function moveloop() {
-    for (const i = 0; i < users.length; i++) {
+    for (var i = 0; i < users.length; i++) {
         tickPlayer(users[i]);
     }
     for (i=0; i < massFood.length; i++) {
@@ -616,9 +616,9 @@ function gameloop() {
     if (users.length > 0) {
         users.sort( function(a, b) { return b.massTotal - a.massTotal; });
 
-        const topUsers = [];
+        var topUsers = [];
 
-        for (const i = 0; i < Math.min(10, users.length); i++) {
+        for (var i = 0; i < Math.min(10, users.length); i++) {
             if(users[i].type == 'player') {
                 topUsers.push({
                     id: users[i].id,
@@ -640,9 +640,9 @@ function gameloop() {
             }
         }
         for (i = 0; i < users.length; i++) {
-            for(const z=0; z < users[i].cells.length; z++) {
-                if (users[i].cells[z].mass * (1 - (conf.massLossRate / 1000)) > conf.defaultPlayerMass && users[i].massTotal > conf.minMassLoss) {
-                    const massLoss = users[i].cells[z].mass * (1 - (conf.massLossRate / 1000));
+            for(var z=0; z < users[i].cells.length; z++) {
+                if (users[i].cells[z].mass * (1 - (c.massLossRate / 1000)) > c.defaultPlayerMass && users[i].massTotal > c.minMassLoss) {
+                    var massLoss = users[i].cells[z].mass * (1 - (c.massLossRate / 1000));
                     users[i].massTotal -= users[i].cells[z].mass - massLoss;
                     users[i].cells[z].mass = massLoss;
                 }
@@ -655,10 +655,10 @@ function gameloop() {
 function sendUpdates() {
     users.forEach( function(u) {
         // center the view if x/y is undefined, this will happen for spectators
-        u.x = u.x || conf.gameWidth / 2;
-        u.y = u.y || conf.gameHeight / 2;
+        u.x = u.x || c.gameWidth / 2;
+        u.y = u.y || c.gameHeight / 2;
 
-        const visibleFood  = food
+        var visibleFood  = food
             .map(function(f) {
                 if ( f.x > u.x - u.screenWidth/2 - 20 &&
                     f.x < u.x + u.screenWidth/2 + 20 &&
@@ -669,7 +669,7 @@ function sendUpdates() {
             })
             .filter(function(f) { return f; });
 
-        const visibleVirus  = virus
+        var visibleVirus  = virus
             .map(function(f) {
                 if ( f.x > u.x - u.screenWidth/2 - f.radius &&
                     f.x < u.x + u.screenWidth/2 + f.radius &&
@@ -680,7 +680,7 @@ function sendUpdates() {
             })
             .filter(function(f) { return f; });
 
-        const visibleMass = massFood
+        var visibleMass = massFood
             .map(function(f) {
                 if ( f.x+f.radius > u.x - u.screenWidth/2 - 20 &&
                     f.x-f.radius < u.x + u.screenWidth/2 + 20 &&
@@ -691,9 +691,9 @@ function sendUpdates() {
             })
             .filter(function(f) { return f; });
 
-        const visibleCells  = users
+        var visibleCells  = users
             .map(function(f) {
-                for(const z=0; z<f.cells.length; z++)
+                for(var z=0; z<f.cells.length; z++)
                 {
                     if ( f.cells[z].x+f.cells[z].radius > u.x - u.screenWidth/2 - 20 &&
                         f.cells[z].x-f.cells[z].radius < u.x + u.screenWidth/2 + 20 &&
@@ -738,11 +738,11 @@ function sendUpdates() {
 
 setInterval(moveloop, 1000 / 60);
 setInterval(gameloop, 1000);
-setInterval(sendUpdates, 1000 / conf.networkUpdateFactor);
+setInterval(sendUpdates, 1000 / c.networkUpdateFactor);
 
 // Don't touch, IP configurations.
-const ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || conf.host;
-const serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || conf.port;
+var ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || c.host;
+var serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || c.port;
 http.listen( serverport, ipaddress, function() {
     console.log('[DEBUG] Listening on ' + ipaddress + ':' + serverport);
 });

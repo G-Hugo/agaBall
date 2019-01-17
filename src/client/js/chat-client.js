@@ -1,4 +1,4 @@
-constglobal = require('./global');
+var global = require('./global');
 
 class ChatClient {
     constructor(params) {
@@ -6,9 +6,9 @@ class ChatClient {
         this.socket = global.socket;
         this.mobile = global.mobile;
         this.player = global.player;
-        constself = this;
+        var self = this;
         this.commands = {};
-        constinput = document.getElementById('chatInput');
+        var input = document.getElementById('chatInput');
         input.addEventListener('keypress', this.sendChat.bind(this));
         input.addEventListener('keyup', function(key) {
             input = document.getElementById('chatInput');
@@ -24,7 +24,7 @@ class ChatClient {
     // TODO: Break out many of these GameControls into separate classes.
 
     registerFunctions() {
-        constself = this;
+        var self = this;
         this.registerCommand('ping', 'Check your latency.', function () {
             self.checkLatency();
         });
@@ -68,7 +68,7 @@ class ChatClient {
         if (this.mobile) {
             return;
         }
-        constnewline = document.createElement('li');
+        var newline = document.createElement('li');
 
         // Colours the chat input correctly.
         newline.className = (me) ? 'me' : 'friend';
@@ -82,7 +82,7 @@ class ChatClient {
         if (this.mobile) {
             return;
         }
-        constnewline = document.createElement('li');
+        var newline = document.createElement('li');
 
         // Colours the chat input correctly.
         newline.className = 'system';
@@ -97,7 +97,7 @@ class ChatClient {
         if (this.mobile) {
             return;
         }
-        constchatList = document.getElementById('chatList');
+        var chatList = document.getElementById('chatList');
         if (chatList.childNodes.length > 10) {
             chatList.removeChild(chatList.childNodes[0]);
         }
@@ -106,18 +106,18 @@ class ChatClient {
 
     // Sends a message or executes a command on the click of enter.
     sendChat(key) {
-        constcommands = this.commands,
+        var commands = this.commands,
             input = document.getElementById('chatInput');
 
         key = key.which || key.keyCode;
 
         if (key === global.KEY_ENTER) {
-            consttext = input.value.replace(/(<([^>]+)>)/ig,'');
+            var text = input.value.replace(/(<([^>]+)>)/ig,'');
             if (text !== '') {
 
                 // Chat command.
                 if (text.indexOf('-') === 0) {
-                    constargs = text.substring(1).split(' ');
+                    var args = text.substring(1).split(' ');
                     if (commands[args[0]]) {
                         commands[args[0]].callback(args.slice(1));
                     } else {
@@ -147,8 +147,8 @@ class ChatClient {
 
     // Allows help to print the list of all the commands and their descriptions.
     printHelp() {
-        constcommands = this.commands;
-        for (constcmd in commands) {
+        var commands = this.commands;
+        for (var cmd in commands) {
             if (commands.hasOwnProperty(cmd)) {
                 this.addSystemLine('-' + cmd + ': ' + commands[cmd].description);
             }
@@ -162,9 +162,9 @@ class ChatClient {
     }
 
     toggleDarkMode() {
-        constLIGHT = '#f2fbff',
+        var LIGHT = '#f2fbff',
             DARK = '#181818';
-        constLINELIGHT = '#000000',
+        var LINELIGHT = '#000000',
             LINEDARK = '#ffffff';
 
         if (global.backgroundColor === LIGHT) {
